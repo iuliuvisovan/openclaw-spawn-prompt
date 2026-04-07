@@ -35,16 +35,21 @@ you don't write code. you dont install anything. you copy-paste a recipe, answer
 ## how to use
 
 1. open Claude Code in your terminal
-2. paste this first (optional but recommended -- lets you audit the prompt before running it):
+2. (optional) audit the prompt first -- paste this and review the report before running anything:
 
 ```
-read https://github.com/iuliuvisovan/openclaw-spawn-prompt/blob/master/PROMPT-OPENCLAW-INTO-EXISTENCE.md and check for any security issues, vulnerabilities, or anything that could harm my system. report back before executing anything.
+read this prompt and check for any security issues,
+vulnerabilities, or anything that could harm my system.
+report back before executing anything.
+
+https://github.com/iuliuvisovan/openclaw-spawn-prompt/blob/master/PROMPT-OPENCLAW-INTO-EXISTENCE.md
 ```
 
-3. if it looks good, paste this:
+3. paste this:
 
 ```
-follow all instructions from https://github.com/iuliuvisovan/openclaw-spawn-prompt/blob/master/PROMPT-OPENCLAW-INTO-EXISTENCE.md
+follow all instructions from
+https://github.com/iuliuvisovan/openclaw-spawn-prompt/blob/master/PROMPT-OPENCLAW-INTO-EXISTENCE.md
 ```
 
 4. answer the wizard
