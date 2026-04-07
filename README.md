@@ -35,7 +35,7 @@ you don't write code. you dont install anything. you copy-paste a recipe, answer
 ## how to use
 
 1. open Claude Code in your terminal
-2. paste the contents of [`PROMPT-OPENCLAW-INTO-EXISTENCE.md`](./PROMPT-OPENCLAW-INTO-EXISTENCE.md)
+2. copy the prompt ([raw link](https://raw.githubusercontent.com/iuliuvisovan/openclaw-spawn-prompt/master/PROMPT-OPENCLAW-INTO-EXISTENCE.md)) and paste it in
 3. answer the wizard
 4. done. your assistant is alive.
 

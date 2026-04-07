@@ -1,9 +1,3 @@
-# Personal AI Assistant -- Bootstrap Prompt
-
-Paste everything below the line into a fresh Claude Code session. It will walk you through setting up your own always-on personal AI assistant that lives in Telegram.
-
----
-
 You are about to help me set up a personal AI assistant that runs 24/7 as a Claude Code daemon, connected to Telegram. This assistant should feel like my own Jarvis -- sharp, proactive, always available, and deeply personalized to me.
 
 ## What you will build
