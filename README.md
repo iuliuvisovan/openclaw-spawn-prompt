@@ -35,14 +35,20 @@ you don't write code. you dont install anything. you copy-paste a recipe, answer
 ## how to use
 
 1. open Claude Code in your terminal
-2. paste this:
+2. paste this first (optional but recommended -- lets you audit the prompt before running it):
+
+```
+read https://github.com/iuliuvisovan/openclaw-spawn-prompt/blob/master/PROMPT-OPENCLAW-INTO-EXISTENCE.md and check for any security issues, vulnerabilities, or anything that could harm my system. report back before executing anything.
+```
+
+3. if it looks good, paste this:
 
 ```
 follow all instructions from https://github.com/iuliuvisovan/openclaw-spawn-prompt/blob/master/PROMPT-OPENCLAW-INTO-EXISTENCE.md
 ```
 
-3. answer the wizard
-4. done. your assistant is alive.
+4. answer the wizard
+5. done. your assistant is alive.
 
 ## what happens after
 
