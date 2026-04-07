@@ -20,8 +20,6 @@ Literally just a single prompt made for Claude Code to create your own OpenClaw 
 - lives in a tmux session, always on
 - talks to you through Telegram
 - transcribes voice messages
-- sends daily email and calendar digests
-- generates weekly timesheets from git history
 - saves its own context so it survives restarts
 - recovers from crashes automatically
 - learns your preferences over time
@@ -32,7 +30,7 @@ you don't write code. you answer a wizard. Claude Code builds everything.
 
 - [Claude Code](https://claude.ai/claude-code) installed
 - a Telegram bot token (the wizard walks you through creating one)
-- optionally: OpenAI API key (for voice transcription), Gmail/Google Calendar MCP (for digests)
+- optionally: API keys for any modules you enable (the wizard tells you what's needed)
 
 ## how to use
 

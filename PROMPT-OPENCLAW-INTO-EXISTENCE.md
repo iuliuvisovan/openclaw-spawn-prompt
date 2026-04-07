@@ -12,8 +12,6 @@ A Claude Code session running in tmux that:
 - Listens for Telegram messages via the Telegram channel plugin
 - Has a persistent identity, personality, and memory
 - Can transcribe voice messages (via OpenAI Whisper)
-- Can send daily email + calendar digests (via Gmail and Google Calendar MCP)
-- Can generate weekly timesheets from git history
 - Auto-saves context so it survives restarts and compacts
 - Has a crash-recovery watchdog
 - Can be controlled from the terminal with simple commands
@@ -83,40 +81,22 @@ Present each module with a short description and ask yes/no:
    - Requires: OpenAI API key
    - Ask for the key if they want this module
 
-2. **Daily email + calendar digest** (recommended)
-   - Morning summary of emails and today's calendar
-   - Requires: Gmail MCP (built into Claude Code) + Google Calendar MCP
-   - Ask what time they want the digest (default: 9:00 AM local)
-   - Ask for any email exclusion rules (e.g., "ignore all marketing newsletters")
-   - Ask for any special email handling rules (e.g., invoice detection)
-
-3. **Weekly timesheet** (recommended for developers)
-   - Generates work summaries from git commit history
-   - Ask for the repo path(s) and git author name/email
-
-4. **Apple Reminders integration** (macOS only, optional)
-   - Create reminders from Telegram with natural language
-   - Requires: `remindctl` CLI tool (ask if they have it or want to set it up)
-   - Ask for default reminder times (e.g., 10:00 for tasks, 17:30 for errands)
-
-5. **Web search** (recommended)
+2. **Web search** (recommended)
    - Search the web and summarize results from Telegram
    - Built into Claude Code, no extra setup needed
 
-6. **Context persistence** (strongly recommended)
+3. **Context persistence** (strongly recommended)
    - Auto-saves conversation context every 2 hours
    - Survives compacts and restarts
    - No extra setup needed, just creates the skill and cron
 
-7. **Proactive check-ins** (optional)
+4. **Proactive check-ins** (optional)
    - Heartbeat every 4 hours -- checks for pending reminders, upcoming events, anything to flag
    - Ask what interval they want (default: 4 hours)
 
 ### Step 7: Telegram commands
 Based on selected modules, show what commands will be registered:
 - Always: /stop, /help, /status, /restart
-- If digest: /digest
-- If timesheet: /timesheet
 - If memory: /remember, /forget
 - If search: /search
 - Ask if they want to add any custom commands
@@ -251,12 +231,6 @@ Add to ~/.zshrc (or ~/.bashrc):
 #### Voice transcription skill (.claude/skills/voice-transcribe/SKILL.md)
 Whisper pipeline: react with eye emoji, download attachment, ffmpeg convert OGA to MP3, call gpt-4o-transcribe API, reply with blockquote transcription, follow up if it was a question.
 
-#### Daily digest skill (.claude/skills/daily-digest/SKILL.md)
-Search Gmail for last 24h emails, read relevant ones, check calendar for today+tomorrow, compile and send via Telegram. Include user's exclusion rules and special handling rules.
-
-#### Timesheet skill (.claude/skills/timesheet/SKILL.md)
-Git log for the week, filtered by user's commits, one line per workday with summary.
-
 #### Save context skill (.claude/skills/save-context/SKILL.md)
 Save timestamped context summary to daily memory file. Only meaningful stuff: decisions, learnings, config changes, preferences. Skip routine activity.
 
@@ -269,9 +243,7 @@ Create the memory directory and seed files:
 ### 9. Permission configuration
 Add to `~/.claude/settings.json` (merge, don't overwrite):
 - Allow: Telegram MCP tools (reply, react, edit_message, download_attachment)
-- Allow: Gmail MCP tools (if digest enabled)
-- Allow: Google Calendar MCP tools (if digest enabled)
-- Allow: Bash for specific tools only (remindctl, curl, ffmpeg, date)
+- Allow: Bash for specific tools only (curl, ffmpeg, date)
 - Deny: Write/Edit to any read-only paths from Step 3
 
 ### 10. Register Telegram bot commands
@@ -283,9 +255,8 @@ After generating everything:
 1. Tell the user to run: `source ~/.zshrc` (to load the shell function)
 2. Tell them to start with: `{name} start`
 3. Tell them to send a test message from Telegram
-4. If they enabled Google Calendar: remind them to do one-time OAuth (attach to tmux, trigger /digest manually, follow the auth prompt)
-5. If they enabled the watchdog: give them the launchctl bootstrap command
-6. Remind them that crons auto-expire after 7 days -- the CLAUDE.md startup section handles re-creation automatically
+4. If they enabled the watchdog: give them the launchctl bootstrap command
+5. Remind them that crons auto-expire after 7 days -- the CLAUDE.md startup section handles re-creation automatically
 
 ## Important implementation notes (from battle-testing)
 
@@ -305,7 +276,7 @@ These are hard-won lessons. Follow them exactly:
 
 7. **Message delivery during processing**: Telegram messages sent while Claude is mid-processing a previous message may be silently dropped by the plugin. This is a known limitation.
 
-8. **Romanian diacritics** (or any special characters): If the user's language uses diacritics or special characters, explicitly instruct the assistant to always use them. Models sometimes drop them unless told not to.
+8. **Diacritics and special characters**: If the user's language uses diacritics or special characters, explicitly instruct the assistant to always use them. Models sometimes drop them unless told not to.
 
 9. **Token budget**: A Claude Pro subscription gives roughly 230K tokens per 5-hour rolling window. Medium effort is recommended for always-on assistants to stretch this budget. High effort burns through it fast.
 
@@ -315,7 +286,7 @@ These are hard-won lessons. Follow them exactly:
 
 12. **Auth expiry is invisible to the user**: When the Anthropic API token expires or becomes invalid, Claude can't process messages AND can't notify via Telegram -- the error happens at the API level before Claude gets to execute any code. Messages just silently go unanswered. Solution: the restart loop in start.sh should capture the last N lines from the tmux pane after Claude exits, grep for error patterns (authentication, rate_limit, expired, crash), and send a notification directly via curl to the Telegram Bot API. This is the only way to surface fatal errors. See the start.sh error notification pattern.
 
-13. **Login is per config dir, not global**: If running multiple profiles (e.g., ~/.claude for personal, ~/.claude-toptal for work), logging in on one does NOT fix the other. The daemon's CLAUDE_CONFIG_DIR determines which auth token is used. If the personal token expires, you must login specifically with CLAUDE_CONFIG_DIR pointing to ~/.claude -- logging in from a different session that uses ~/.claude-toptal won't help.
+13. **Login is per config dir, not global**: If running multiple profiles (e.g., ~/.claude for personal, ~/.claude-work for work), logging in on one does NOT fix the other. The daemon's CLAUDE_CONFIG_DIR determines which auth token is used. If the personal token expires, you must login specifically with CLAUDE_CONFIG_DIR pointing to ~/.claude -- logging in from a different session that uses a different config dir won't help.
 
 14. **/logout breaks --continue**: After /logout + auto-restart, --continue can't resume because the session is invalidated. Claude starts completely fresh (theme picker, onboarding). This requires manual intervention (attach to tmux, complete login). Avoid /logout for testing error notifications -- instead, temporarily rename/move the auth credentials file, which produces an auth error without destroying the session.
 
@@ -326,7 +297,7 @@ These are hard-won lessons. Follow them exactly:
     if echo "$LAST_OUTPUT" | grep -qiE 'error|authentication|rate.limit|expired|crash'; then
       curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
         -d chat_id="$CHAT_ID" -d parse_mode="Markdown" \
-        --data-urlencode "text=$(printf 'warning Clavdiu crashed (exit %s). Restarting...\n\n```\n%s\n```' "$EXIT_CODE" "$LAST_OUTPUT")" > /dev/null
+        --data-urlencode "text=$(printf 'warning {assistant-name} crashed (exit %s). Restarting...\n\n```\n%s\n```' "$EXIT_CODE" "$LAST_OUTPUT")" > /dev/null
     fi
     ```
     Store BOT_TOKEN and CHAT_ID at the top of start.sh, read from the channel .env file.
