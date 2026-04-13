@@ -259,7 +259,14 @@ Add to `~/.claude/settings.json` (merge, don't overwrite):
 - Allow: Bash for specific tools only (curl, ffmpeg, date)
 - Deny: Write/Edit to any read-only paths from Step 3
 
-### 10. Register Telegram bot commands
+### 10. tmux configuration
+If `~/.tmux.conf` does not exist, create it. If it exists, append only missing settings. Ensure it includes:
+```
+set -g mouse on
+```
+This enables mouse scrolling, text selection, and clicking inside the tmux session -- essential for navigating the assistant's terminal output.
+
+### 11. Register Telegram bot commands
 Use curl to call Telegram Bot API setMyCommands with the selected command list.
 
 ## Post-setup
