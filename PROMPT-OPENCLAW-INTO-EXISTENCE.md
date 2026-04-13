@@ -23,9 +23,13 @@ Ask the user (via AskUserQuestion):
   - **I don't use Telegram with OpenClaw**: continue, but still recommend uninstalling to avoid accidental conflicts
 
 If the user chooses to uninstall, run:
-1. `npm uninstall -g openclaw`
-2. Remove the `source ".../.openclaw/completions/openclaw.zsh"` line from ~/.zshrc (if present)
-3. Ask if they also want to remove `~/.openclaw` (config + data directory)
+1. Check where the binary lives with `ls -la $(which openclaw)` -- it may be installed under nvm's node (`~/.nvm/versions/node/...`) OR under Homebrew's node (`/opt/homebrew/lib/node_modules/`). Use the matching npm to uninstall:
+   - If under nvm: `npm uninstall -g openclaw`
+   - If under Homebrew: `/opt/homebrew/bin/npm uninstall -g openclaw`
+2. Verify removal with `which openclaw` -- if it still exists, check for other installations
+3. Remove the `source ".../.openclaw/completions/openclaw.zsh"` line from ~/.zshrc (if present)
+4. Remove `~/.openclaw` directory (config + data)
+5. Kill any running openclaw processes: `pkill -f openclaw`
 
 If OpenClaw is not installed, skip this step silently.
 
