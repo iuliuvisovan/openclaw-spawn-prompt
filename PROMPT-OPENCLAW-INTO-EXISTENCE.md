@@ -10,6 +10,25 @@ A Claude Code session running in tmux that:
 - Has a crash-recovery watchdog
 - Can be controlled from the terminal with simple commands
 
+## Before you start: OpenClaw conflict check
+
+Before running the wizard, check if OpenClaw is installed by running `which openclaw`. If it is installed, warn the user:
+
+OpenClaw uses the same Telegram bot polling mechanism. Having both running (or even installed) will cause silent message loss -- Telegram dispatches each update to only one poller at random, so messages randomly go to the wrong process.
+
+Ask the user (via AskUserQuestion):
+- "OpenClaw is installed on this machine. It conflicts with this assistant's Telegram integration. What would you like to do?"
+  - **Uninstall now** (recommended): runs `npm uninstall -g openclaw`, removes the shell completion line from ~/.zshrc, and optionally removes ~/.openclaw
+  - **Skip, I will uninstall later**: continue with setup, but warn that Telegram messages WILL be unreliable until OpenClaw is fully removed
+  - **I don't use Telegram with OpenClaw**: continue, but still recommend uninstalling to avoid accidental conflicts
+
+If the user chooses to uninstall, run:
+1. `npm uninstall -g openclaw`
+2. Remove the `source ".../.openclaw/completions/openclaw.zsh"` line from ~/.zshrc (if present)
+3. Ask if they also want to remove `~/.openclaw` (config + data directory)
+
+If OpenClaw is not installed, skip this step silently.
+
 ## How this works
 
 You will walk me through a wizard using AskUserQuestion. Ask one question at a time (or small groups of related questions). After gathering all my answers, you will generate every file needed and guide me through the final setup steps.
