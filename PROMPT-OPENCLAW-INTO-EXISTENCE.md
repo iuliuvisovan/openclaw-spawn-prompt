@@ -183,7 +183,7 @@ pkill -f "external_plugins/telegram.*start" 2>/dev/null
 sleep 1
 tmux new-session -d -s "$SESSION" -c "$WORKDIR"
 tmux send-keys -t "$SESSION" \
-  "while true; do CLAUDE_CONFIG_DIR=$HOME/.claude command claude --dangerously-skip-permissions --continue --effort medium --channels plugin:telegram@claude-plugins-official; echo \"\$(date): Claude exited, restarting in 5s...\" >> $WORKDIR/daemon.log; sleep 5; done" Enter
+  "while true; do pkill -f 'external_plugins/telegram.*start' 2>/dev/null; CLAUDE_CONFIG_DIR=$HOME/.claude command claude --dangerously-skip-permissions --continue --effort medium --channels plugin:telegram@claude-plugins-official; echo \"\$(date): Claude exited, restarting in 5s...\" >> $WORKDIR/daemon.log; sleep 5; done" Enter
 
 echo "$(date): Started session $SESSION" >> "$WORKDIR/daemon.log"
 ```
@@ -286,7 +286,7 @@ After generating everything:
 
 These are hard-won lessons. Follow them exactly:
 
-1. **Stale Telegram plugin processes**: When Claude Code exits, the Telegram plugin process (bun) may keep running. Multiple instances fight over bot polling, causing messages to silently disappear. ALWAYS pkill before starting.
+1. **Stale Telegram plugin processes**: When Claude Code exits, the Telegram plugin process (bun) may keep running. Multiple instances fight over bot polling, causing messages to silently disappear. ALWAYS pkill before starting. The pkill in start.sh only runs once at startup -- it does NOT run between loop iterations. Since bun can survive each Claude exit, zombies accumulate across restarts within the same loop. The while loop must also pkill before each Claude invocation.
 
 2. **--continue vs fresh start**: --continue resumes the last conversation in the working directory. This preserves context but also preserves effort level. The --effort flag only applies to new sessions. If you need to change effort after resume, type /effort directly in the tmux session.
 
