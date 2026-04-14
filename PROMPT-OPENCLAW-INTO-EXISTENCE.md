@@ -199,9 +199,47 @@ Key features:
 ```bash
 #!/bin/bash
 SESSION="{assistant-name-lowercase}"
+WORKDIR="$HOME/repos/{assistant-name-lowercase}"
+LOG="$WORKDIR/watchdog.log"
+
+# 1. If tmux session doesn't exist at all, restart
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
-  echo "$(date): Session not found, restarting..." >> "$HOME/repos/{assistant-name-lowercase}/watchdog.log"
-  bash "$HOME/repos/{assistant-name-lowercase}/start.sh"
+  echo "$(date): Session not found, restarting..." >> "$LOG"
+  bash "$WORKDIR/start.sh"
+  exit 0
+fi
+
+# 2. Session exists but Claude might not be running inside it
+# (e.g., double Ctrl-C killed Claude AND the restart loop, leaving an idle shell)
+PANE_CMD=$(tmux display-message -t "$SESSION" -p '#{pane_current_command}' 2>/dev/null)
+
+if [[ "$PANE_CMD" == "zsh" || "$PANE_CMD" == "bash" ]]; then
+  echo "$(date): Session exists but Claude not running (pane_cmd=$PANE_CMD), restarting..." >> "$LOG"
+  pkill -f "plugins/cache/claude-plugins-official/telegram" 2>/dev/null
+  sleep 1
+  tmux kill-session -t "$SESSION" 2>/dev/null
+  sleep 1
+  bash "$WORKDIR/start.sh"
+  exit 0
+fi
+
+# 3. Kill orphaned telegram bun processes not belonging to the active session
+PANE_PID=$(tmux display-message -t "$SESSION" -p '#{pane_pid}' 2>/dev/null)
+if [[ -n "$PANE_PID" ]]; then
+  TELEGRAM_PIDS=$(pgrep -f "plugins/cache/claude-plugins-official/telegram" 2>/dev/null)
+  for PID in $TELEGRAM_PIDS; do
+    PARENT=$PID
+    IS_CHILD=false
+    for i in $(seq 1 10); do
+      PARENT=$(ps -o ppid= -p "$PARENT" 2>/dev/null | tr -d ' ')
+      if [[ -z "$PARENT" || "$PARENT" == "1" ]]; then break; fi
+      if [[ "$PARENT" == "$PANE_PID" ]]; then IS_CHILD=true; break; fi
+    done
+    if [[ "$IS_CHILD" == "false" ]]; then
+      echo "$(date): Killing orphaned telegram process PID=$PID" >> "$LOG"
+      kill "$PID" 2>/dev/null
+    fi
+  done
 fi
 ```
 
@@ -325,3 +363,5 @@ These are hard-won lessons. Follow them exactly:
     fi
     ```
     Store BOT_TOKEN and CHAT_ID at the top of start.sh, read from the channel .env file.
+
+16. **Watchdog must check process, not just session**: The basic `tmux has-session` check is insufficient. When the user double Ctrl-C's (or the restart loop exits for any reason), the tmux session stays alive with an idle shell prompt, but Claude is not running. The watchdog sees the session and thinks everything is fine. Fix: check `#{pane_current_command}` -- if it's "zsh" or "bash", Claude is dead and needs a full restart (kill session + start.sh). This is already implemented in the watchdog.sh template above.
