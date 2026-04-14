@@ -188,7 +188,7 @@ pkill -f "external_plugins/telegram.*start" 2>/dev/null
 sleep 1
 tmux new-session -d -s "$SESSION" -c "$WORKDIR"
 tmux send-keys -t "$SESSION" \
-  "while true; do CLAUDE_CONFIG_DIR=$HOME/.claude command claude --dangerously-skip-permissions --continue --effort medium --model claude-opus-4-20250514 --channels plugin:telegram@claude-plugins-official; echo \"\$(date): Claude exited, restarting in 5s...\" >> $WORKDIR/daemon.log; sleep 5; done" Enter
+  "while true; do CLAUDE_CONFIG_DIR=$HOME/.claude command claude --dangerously-skip-permissions --continue --effort medium --model claude-opus-4-6 --channels plugin:telegram@claude-plugins-official; echo \"\$(date): Claude exited, restarting in 5s...\" >> $WORKDIR/daemon.log; sleep 5; done" Enter
 
 echo "$(date): Started session $SESSION" >> "$WORKDIR/daemon.log"
 ```
