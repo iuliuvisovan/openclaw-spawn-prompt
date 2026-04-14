@@ -281,7 +281,20 @@ Add to ~/.zshrc (or ~/.bashrc):
 }
 ```
 
-### 7. Skills (based on module selection)
+### 7. Maker shell function
+Add a second shell function to ~/.zshrc (or ~/.bashrc) that resumes the Claude Code session used to spawn and manage the assistant. This is the "control room" -- for editing the assistant's CLAUDE.md, skills, memory, start.sh, watchdog, etc.
+
+```bash
+{assistant-name-lowercase}-maker() {
+  claude --dangerously-skip-permissions --resume {SESSION_ID}
+}
+```
+
+Replace `{SESSION_ID}` with the actual session ID from the current Claude Code conversation (the one running the wizard). Use whatever `claude` alias/function the user already has for the correct profile (e.g., if they use `claudet` for their work profile, use that instead of bare `claude`).
+
+Tell the user: "Run `source ~/.zshrc`, then use `{assistant-name-lowercase}-maker` anytime you want to tweak the assistant's config, skills, or infrastructure."
+
+### 8. Skills (based on module selection)
 
 #### Voice transcription skill (.claude/skills/voice-transcribe/SKILL.md)
 Whisper pipeline: react with eye emoji, download attachment, ffmpeg convert OGA to MP3, call gpt-4o-transcribe API, reply with blockquote transcription, follow up if it was a question.
@@ -289,26 +302,26 @@ Whisper pipeline: react with eye emoji, download attachment, ffmpeg convert OGA 
 #### Save context skill (.claude/skills/save-context/SKILL.md)
 Save timestamped context summary to daily memory file. Only meaningful stuff: decisions, learnings, config changes, preferences. Skip routine activity.
 
-### 8. Memory structure
+### 9. Memory structure
 Create the memory directory and seed files:
 - `memory/MEMORY.md` (index)
 - `memory/{user-name-lowercase}_personal.md` (user profile from Step 2)
 - `memory/interaction_preferences.md` (communication preferences from Step 4)
 
-### 9. Permission configuration
+### 10. Permission configuration
 Add to `~/.claude/settings.json` (merge, don't overwrite):
 - Allow: Telegram MCP tools (reply, react, edit_message, download_attachment)
 - Allow: Bash for specific tools only (curl, ffmpeg, date)
 - Deny: Write/Edit to any read-only paths from Step 3
 
-### 10. tmux configuration
+### 11. tmux configuration
 If `~/.tmux.conf` does not exist, create it. If it exists, append only missing settings. Ensure it includes:
 ```
 set -g mouse on
 ```
 This enables mouse scrolling, text selection, and clicking inside the tmux session -- essential for navigating the assistant's terminal output.
 
-### 11. Register Telegram bot commands
+### 12. Register Telegram bot commands
 Use curl to call Telegram Bot API setMyCommands with the selected command list.
 
 ## Post-setup
