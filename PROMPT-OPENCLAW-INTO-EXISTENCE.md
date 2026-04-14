@@ -177,13 +177,14 @@ When you discover a fix, workaround, or improvement that would benefit future sp
 #!/bin/zsh
 SESSION="{assistant-name-lowercase}"
 WORKDIR="$HOME/repos/{assistant-name-lowercase}"
+BOOT_PROMPT="You just restarted. Run your Session Startup Checklist, then message {user-name} on Telegram that you are back online."
 
 tmux kill-session -t "$SESSION" 2>/dev/null
 pkill -f "external_plugins/telegram.*start" 2>/dev/null
 sleep 1
 tmux new-session -d -s "$SESSION" -c "$WORKDIR"
 tmux send-keys -t "$SESSION" \
-  "while true; do CLAUDE_CONFIG_DIR=$HOME/.claude command claude --dangerously-skip-permissions --continue --effort medium --channels plugin:telegram@claude-plugins-official; echo \"\$(date): Claude exited, restarting in 5s...\" >> $WORKDIR/daemon.log; sleep 5; done" Enter
+  "while true; do CLAUDE_CONFIG_DIR=$HOME/.claude command claude --dangerously-skip-permissions --continue --effort medium --channels plugin:telegram@claude-plugins-official -- \"$BOOT_PROMPT\"; echo \"\$(date): Claude exited, restarting in 5s...\" >> $WORKDIR/daemon.log; sleep 5; done" Enter
 
 echo "$(date): Started session $SESSION" >> "$WORKDIR/daemon.log"
 ```
@@ -194,6 +195,7 @@ Key features:
 - Uses --continue to resume previous conversation (preserves context)
 - Uses --effort medium to save tokens (recommend medium for always-on, high burns fast)
 - CLAUDE_CONFIG_DIR ensures correct auth profile
+- Boot prompt (via `--` separator) triggers the startup checklist and Telegram notification on every restart
 
 ### 4. watchdog.sh (crash recovery)
 ```bash
@@ -325,3 +327,5 @@ These are hard-won lessons. Follow them exactly:
     fi
     ```
     Store BOT_TOKEN and CHAT_ID at the top of start.sh, read from the channel .env file.
+
+16. **Boot prompt pattern for startup checklist**: The CLAUDE.md startup checklist (recreate crons, read context, greet user) only runs when the agent processes a message. Without an incoming Telegram message, the agent sits idle after restart. Fix: pass a boot prompt as a positional argument using the `--` separator: `claude --channels plugin:telegram@... -- "Run your startup checklist"`. The `--` is required because `--channels` is variadic and swallows subsequent positional arguments. This works with `--continue` -- the session resumes AND the boot prompt is processed as a new user message. On every restart, the agent immediately runs its checklist, recreates crons, and sends the user a Telegram notification -- no manual message needed to trigger it.
