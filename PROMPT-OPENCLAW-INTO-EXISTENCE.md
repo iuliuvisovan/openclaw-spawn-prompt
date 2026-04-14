@@ -245,7 +245,7 @@ if [[ -n "$PANE_PID" ]]; then
     done
     if [[ "$IS_CHILD" == "false" ]]; then
       echo "$(date): Killing orphaned bun process PID=$PID ($(ps -o command= -p $PID 2>/dev/null | head -c 80))" >> "$LOG"
-      kill "$PID" 2>/dev/null
+      kill -9 "$PID" 2>/dev/null
     fi
   done
 fi
