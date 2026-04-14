@@ -188,7 +188,7 @@ pkill -f "external_plugins/telegram.*start" 2>/dev/null
 sleep 1
 tmux new-session -d -s "$SESSION" -c "$WORKDIR"
 tmux send-keys -t "$SESSION" \
-  "while true; do CLAUDE_CONFIG_DIR=$HOME/.claude command claude --dangerously-skip-permissions --continue --effort medium --channels plugin:telegram@claude-plugins-official; echo \"\$(date): Claude exited, restarting in 5s...\" >> $WORKDIR/daemon.log; sleep 5; done" Enter
+  "while true; do CLAUDE_CONFIG_DIR=$HOME/.claude command claude --dangerously-skip-permissions --continue --effort medium --model claude-opus-4-20250514 --channels plugin:telegram@claude-plugins-official; echo \"\$(date): Claude exited, restarting in 5s...\" >> $WORKDIR/daemon.log; sleep 5; done" Enter
 
 echo "$(date): Started session $SESSION" >> "$WORKDIR/daemon.log"
 ```
@@ -198,6 +198,7 @@ Key features:
 - Auto-restart loop (when Claude exits from usage limits or crashes, restarts in 5s)
 - Uses --continue to resume previous conversation (preserves context)
 - Uses --effort medium to save tokens (recommend medium for always-on, high burns fast)
+- Uses --model to pin a specific model (ask user which model they want during wizard)
 - CLAUDE_CONFIG_DIR ensures correct auth profile
 
 ### 4. watchdog.sh (crash recovery)
@@ -383,3 +384,5 @@ These are hard-won lessons. Follow them exactly:
     Store BOT_TOKEN and CHAT_ID at the top of start.sh, read from the channel .env file.
 
 16. **Watchdog must check process, not just session**: The basic `tmux has-session` check is insufficient. When the user double Ctrl-C's (or the restart loop exits for any reason), the tmux session stays alive with an idle shell prompt, but Claude is not running. The watchdog sees the session and thinks everything is fine. Fix: check `#{pane_current_command}` -- if it's "zsh" or "bash", Claude is dead and needs a full restart (kill session + start.sh). This is already implemented in the watchdog.sh template above.
+
+17. **--model and --effort only apply to new sessions**: Both `--model` and `--effort` flags are ignored when `--continue` resumes an existing conversation -- it keeps whatever model/effort the previous session had. If the model or effort needs to change, the user must start a fresh session (not --continue). The start.sh template includes both flags so new sessions always start with the right defaults.
