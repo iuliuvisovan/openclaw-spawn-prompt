@@ -111,6 +111,10 @@ Present each module with a short description and ask yes/no:
    - Heartbeat every 4 hours -- checks for pending reminders, upcoming events, anything to flag
    - Ask what interval they want (default: 4 hours)
 
+After presenting the modules, mention:
+
+> **MCP servers from the Claude app work here too.** If you have MCP integrations enabled in your Claude desktop/web app (e.g., Linear, Notion, Gmail, Google Calendar, Slack, Sentry, Figma), they are automatically available to your assistant -- no extra config needed. Your assistant can read Linear issues, check your calendar, search Notion, etc. out of the box. You can enable more anytime from claude.ai/settings or the Claude desktop app.
+
 ### Step 7: Telegram commands
 Based on selected modules, show what commands will be registered:
 - Always: /stop, /help, /status, /restart
