@@ -199,11 +199,33 @@ Key features:
 ```bash
 #!/bin/bash
 SESSION="{assistant-name-lowercase}"
-if ! tmux has-session -t "$SESSION" 2>/dev/null; then
-  echo "$(date): Session not found, restarting..." >> "$HOME/repos/{assistant-name-lowercase}/watchdog.log"
-  bash "$HOME/repos/{assistant-name-lowercase}/start.sh"
+WORKDIR="$HOME/repos/{assistant-name-lowercase}"
+
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  # Kill orphaned telegram plugin processes not attached to the active session
+  TMUX_PID=$(tmux list-panes -t "$SESSION" -F '#{pane_pid}' 2>/dev/null | head -1)
+  if [ -n "$TMUX_PID" ]; then
+    pgrep -f "external_plugins/telegram.*start" | while read PID; do
+      if ! pstree -p "$TMUX_PID" 2>/dev/null | grep -q "$PID"; then
+        kill "$PID" 2>/dev/null
+        echo "$(date): Killed orphaned telegram process $PID" >> "$WORKDIR/watchdog.log"
+      fi
+    done
+    pgrep -f "bun server.ts" | while read PID; do
+      if ! pstree -p "$TMUX_PID" 2>/dev/null | grep -q "$PID"; then
+        kill -9 "$PID" 2>/dev/null
+        echo "$(date): Killed orphaned bun server $PID" >> "$WORKDIR/watchdog.log"
+      fi
+    done
+  fi
+else
+  # Session not running, restart it
+  echo "$(date): Session not found, restarting..." >> "$WORKDIR/watchdog.log"
+  bash "$WORKDIR/start.sh"
 fi
 ```
+
+Requires `pstree`: install `psmisc` on Debian/Ubuntu (`apt install psmisc`) or `pstree` on macOS (`brew install pstree`). Without it, orphan detection silently fails and the watchdog may kill the active Telegram plugin process.
 
 ### 5. LaunchAgent plist (macOS auto-recovery)
 Generate `~/Library/LaunchAgents/com.{assistant-name-lowercase}.watchdog.plist` that runs watchdog.sh every 60 seconds. Include proper PATH environment variable.
@@ -306,7 +328,7 @@ These are hard-won lessons. Follow them exactly:
 
 10. **launchd watchdog**: The plist needs proper PATH to find tmux and claude binaries. Copy PATH from an existing working plist or set it explicitly.
 
-11. **Zombie plugin processes accumulate silently**: Stale Telegram bun processes don't just come from restarts -- they also spawn when you run claude with the telegram channel from other terminals or profiles. Over time you can end up with 5-6 bun processes all polling the same bot. Telegram dispatches each update to only one poller at random, so most messages get swallowed by zombie processes. The pkill in start.sh only helps on restart. For ongoing health, the watchdog should also kill orphaned telegram plugin processes that aren't children of the active tmux session.
+11. **Zombie plugin processes accumulate silently**: Stale Telegram bun processes don't just come from restarts -- they also spawn when you run claude with the telegram channel from other terminals or profiles. Over time you can end up with 5-6 bun processes all polling the same bot. Telegram dispatches each update to only one poller at random, so most messages get swallowed by zombie processes. The pkill in start.sh only helps on restart. For ongoing health, the watchdog uses `pstree` to detect and kill orphaned telegram plugin processes that aren't children of the active tmux session. **Critical**: `pstree` must be installed (`psmisc` on Debian/Ubuntu, `pstree` on macOS via Homebrew). Without it, the orphan check silently fails -- `pstree -p $PID 2>/dev/null | grep -q "$PID"` always returns false -- and the watchdog kills EVERY bun process, including the active one, every 60 seconds.
 
 12. **Auth expiry is invisible to the user**: When the Anthropic API token expires or becomes invalid, Claude can't process messages AND can't notify via Telegram -- the error happens at the API level before Claude gets to execute any code. Messages just silently go unanswered. Solution: the restart loop in start.sh should capture the last N lines from the tmux pane after Claude exits, grep for error patterns (authentication, rate_limit, expired, crash), and send a notification directly via curl to the Telegram Bot API. This is the only way to surface fatal errors. See the start.sh error notification pattern.
 
