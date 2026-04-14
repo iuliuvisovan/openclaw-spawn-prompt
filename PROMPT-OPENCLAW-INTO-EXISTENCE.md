@@ -229,11 +229,13 @@ if [[ "$PANE_CMD" == "zsh" || "$PANE_CMD" == "bash" ]]; then
   exit 0
 fi
 
-# 3. Kill orphaned telegram bun processes not belonging to the active session
+# 3. Kill orphaned bun processes not belonging to the active tmux session
+# This catches both telegram plugin zombies AND generic "bun server.ts" orphans
+# that accumulate from restarts and eat 100% CPU each
 PANE_PID=$(tmux display-message -t "$SESSION" -p '#{pane_pid}' 2>/dev/null)
 if [[ -n "$PANE_PID" ]]; then
-  TELEGRAM_PIDS=$(pgrep -f "plugins/cache/claude-plugins-official/telegram" 2>/dev/null)
-  for PID in $TELEGRAM_PIDS; do
+  ZOMBIE_CANDIDATES=$(pgrep -f "bun.*(server\.ts|telegram)" 2>/dev/null)
+  for PID in $ZOMBIE_CANDIDATES; do
     PARENT=$PID
     IS_CHILD=false
     for i in $(seq 1 10); do
@@ -242,7 +244,7 @@ if [[ -n "$PANE_PID" ]]; then
       if [[ "$PARENT" == "$PANE_PID" ]]; then IS_CHILD=true; break; fi
     done
     if [[ "$IS_CHILD" == "false" ]]; then
-      echo "$(date): Killing orphaned telegram process PID=$PID" >> "$LOG"
+      echo "$(date): Killing orphaned bun process PID=$PID ($(ps -o command= -p $PID 2>/dev/null | head -c 80))" >> "$LOG"
       kill "$PID" 2>/dev/null
     fi
   done
@@ -363,7 +365,7 @@ These are hard-won lessons. Follow them exactly:
 
 10. **launchd watchdog**: The plist needs proper PATH to find tmux and claude binaries. Copy PATH from an existing working plist or set it explicitly.
 
-11. **Zombie plugin processes accumulate silently**: Stale Telegram bun processes don't just come from restarts -- they also spawn when you run claude with the telegram channel from other terminals or profiles. Over time you can end up with 5-6 bun processes all polling the same bot. Telegram dispatches each update to only one poller at random, so most messages get swallowed by zombie processes. The pkill in start.sh only helps on restart. For ongoing health, the watchdog should also kill orphaned telegram plugin processes that aren't children of the active tmux session.
+11. **Zombie bun processes accumulate silently and eat CPU**: Stale bun processes don't just come from restarts -- they also spawn when you run claude with the telegram channel from other terminals or profiles. These orphans run at 100% CPU each and drain battery. They include both telegram plugin pollers (which also steal messages) and generic `bun server.ts` processes. The watchdog must match broadly (`bun.*(server\.ts|telegram)`) and kill any that aren't children of the active tmux pane. Matching only the telegram path misses the generic ones.
 
 12. **Auth expiry is invisible to the user**: When the Anthropic API token expires or becomes invalid, Claude can't process messages AND can't notify via Telegram -- the error happens at the API level before Claude gets to execute any code. Messages just silently go unanswered. Solution: the restart loop in start.sh should capture the last N lines from the tmux pane after Claude exits, grep for error patterns (authentication, rate_limit, expired, crash), and send a notification directly via curl to the Telegram Bot API. This is the only way to surface fatal errors. See the start.sh error notification pattern.
 
