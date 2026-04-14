@@ -113,7 +113,7 @@ Present each module with a short description and ask yes/no:
 
 After presenting the modules, mention:
 
-> **MCP servers from the Claude app work here too.** If you have MCP integrations enabled in your Claude desktop/web app (e.g., Linear, Notion, Gmail, Google Calendar, Slack, Sentry, Figma), they are automatically available to your assistant -- no extra config needed. Your assistant can read Linear issues, check your calendar, search Notion, etc. out of the box. You can enable more anytime from claude.ai/settings or the Claude desktop app. **Note:** after connecting a new MCP server, restart your assistant (`{assistant-name-lowercase} restart`) for it to pick up the new integration.
+> **MCP servers from the Claude app work here too.** If you have MCP integrations enabled in your Claude desktop/web app (e.g., Linear, Notion, Gmail, Google Calendar, Slack, Sentry, Figma), they are automatically available to your assistant -- no extra config needed. Your assistant can read Linear issues, check your calendar, search Notion, etc. out of the box. You can enable more anytime from claude.ai/settings or the Claude desktop app. **Note:** after connecting a new MCP server, restart your assistant for it to pick up the new integration. The CLAUDE.md includes instructions for the assistant to tell the user exactly how to restart when this comes up.
 
 ### Step 7: Telegram commands
 Based on selected modules, show what commands will be registered:
@@ -156,6 +156,7 @@ Generate `{workdir}/CLAUDE.md` with:
 - Token efficiency: ~230K per 5h rolling window, never dump massive datasets
 - Context persistence rules (if enabled): save every 2h, after compacts, read daily file on startup
 - Session startup checklist: recreate crons that expired, read today's context
+- MCP restart guidance: when the user asks about connecting a new integration (Linear, Notion, Gmail, etc.) or the assistant detects a tool is unavailable, tell the user to run `{assistant-name-lowercase} restart` in their terminal to pick up newly connected MCP servers
 - Contributing back section (see below)
 
 #### Contributing back to the spawn prompt
