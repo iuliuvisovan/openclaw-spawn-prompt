@@ -221,7 +221,7 @@ PANE_CMD=$(tmux display-message -t "$SESSION" -p '#{pane_current_command}' 2>/de
 
 if [[ "$PANE_CMD" == "zsh" || "$PANE_CMD" == "bash" ]]; then
   echo "$(date): Session exists but Claude not running (pane_cmd=$PANE_CMD), restarting..." >> "$LOG"
-  pkill -f "plugins/cache/claude-plugins-official/telegram" 2>/dev/null
+  pkill -9 -f "bun.*(server\.ts|telegram)" 2>/dev/null
   sleep 1
   tmux kill-session -t "$SESSION" 2>/dev/null
   sleep 1
@@ -229,10 +229,32 @@ if [[ "$PANE_CMD" == "zsh" || "$PANE_CMD" == "bash" ]]; then
   exit 0
 fi
 
-# 3. Kill orphaned bun processes not belonging to the active tmux session
-# This catches both telegram plugin zombies AND generic "bun server.ts" orphans
-# that accumulate from restarts and eat 100% CPU each
+# 3. Claude is running but telegram plugin (bun) might be dead
+# Plugin can crash silently -- Claude sits idle waiting for messages that never arrive
 PANE_PID=$(tmux display-message -t "$SESSION" -p '#{pane_pid}' 2>/dev/null)
+if [[ -n "$PANE_PID" ]]; then
+  HAS_LIVE_PLUGIN=false
+  PLUGIN_PIDS=$(pgrep -f "bun.*(server\.ts|telegram)" 2>/dev/null)
+  for PID in $PLUGIN_PIDS; do
+    PARENT=$PID
+    for i in $(seq 1 10); do
+      PARENT=$(ps -o ppid= -p "$PARENT" 2>/dev/null | tr -d ' ')
+      if [[ -z "$PARENT" || "$PARENT" == "1" ]]; then break; fi
+      if [[ "$PARENT" == "$PANE_PID" ]]; then HAS_LIVE_PLUGIN=true; break; fi
+    done
+    if [[ "$HAS_LIVE_PLUGIN" == "true" ]]; then break; fi
+  done
+
+  if [[ "$HAS_LIVE_PLUGIN" == "false" ]]; then
+    echo "$(date): Claude running but telegram plugin dead, restarting..." >> "$LOG"
+    tmux kill-session -t "$SESSION" 2>/dev/null
+    sleep 1
+    bash "$WORKDIR/start.sh"
+    exit 0
+  fi
+fi
+
+# 4. Kill orphaned bun processes not belonging to the active tmux session
 if [[ -n "$PANE_PID" ]]; then
   ZOMBIE_CANDIDATES=$(pgrep -f "bun.*(server\.ts|telegram)" 2>/dev/null)
   for PID in $ZOMBIE_CANDIDATES; do
@@ -390,3 +412,5 @@ These are hard-won lessons. Follow them exactly:
 17. **--model and --effort only apply to new sessions**: Both `--model` and `--effort` flags are ignored when `--continue` resumes an existing conversation -- it keeps whatever model/effort the previous session had.
 
 18. **Don't use --continue for daemon mode**: When a session gets old/large, `--continue` triggers an interactive "Resume from summary?" prompt that blocks the daemon (nobody is there to press Enter). Instead, start fresh each time -- the CLAUDE.md, memory files, and session startup checklist provide all necessary context. This also guarantees --model and --effort flags are always respected.
+
+19. **Telegram plugin can die silently while Claude stays alive**: The bun process running the telegram plugin can crash independently of Claude. When this happens, Claude sits idle on its prompt waiting for messages that will never arrive -- it has no way to know the plugin is gone. The watchdog must check that a bun process (child of the tmux pane) is actually running, not just that Claude is running. If the plugin is dead, full restart. This is implemented as check #3 in the watchdog.sh template above.
